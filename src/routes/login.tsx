@@ -39,7 +39,7 @@ function LoginPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -50,6 +50,12 @@ function LoginPage() {
     if (error) {
       setBusy(false);
       return toast.error(error.message);
+    }
+    // If email confirmation is required, no session exists yet — can't bootstrap.
+    if (!signUpData.session) {
+      setBusy(false);
+      toast.success("Account created. Check your email to confirm, then sign in.");
+      return;
     }
     // Try to bootstrap as HR if no HR exists yet
     try {
@@ -66,6 +72,7 @@ function LoginPage() {
     setBusy(false);
     navigate({ to: "/" });
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
