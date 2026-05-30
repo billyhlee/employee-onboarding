@@ -30,9 +30,20 @@ function LoginPage() {
     e.preventDefault();
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setBusy(false);
+      return toast.error(error.message);
+    }
+    // If no HR exists yet, promote this user. No-op otherwise.
+    try {
+      const result = await bootstrap();
+      if (result?.promoted) toast.success("Signed in — you are now the HR admin");
+      else toast.success("Signed in");
+    } catch {
+      toast.success("Signed in");
+    }
+    await refresh();
     setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Signed in");
     navigate({ to: "/" });
   };
 
