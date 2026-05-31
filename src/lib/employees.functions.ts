@@ -131,11 +131,28 @@ export const setUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context as { userId: string };
     await assertHr(userId);
+
+    const { data: existing } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.targetUserId)
+      .maybeSingle();
+    const previousRole = (existing?.role as "hr" | "manager" | "employee" | undefined) ?? null;
+
     await supabaseAdmin.from("user_roles").delete().eq("user_id", data.targetUserId);
     const { error } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: data.targetUserId, role: data.role });
     if (error) throw new Error(error.message);
+
+    if (previousRole !== data.role) {
+      await supabaseAdmin.from("role_change_history").insert({
+        target_user_id: data.targetUserId,
+        previous_role: previousRole,
+        new_role: data.role,
+        changed_by: userId,
+      });
+    }
     return { ok: true };
   });
 
