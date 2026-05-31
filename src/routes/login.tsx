@@ -29,11 +29,13 @@ function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      console.warn(`[LOGIN_AUDIT] Failed login attempt - Email: ${email}, IP: unknown, Error: ${error.message}`);
       setBusy(false);
       return toast.error(error.message);
     }
+    console.info(`[LOGIN_AUDIT] Successful login - User ID: ${data.user?.id}, Email: ${email}, Timestamp: ${new Date().toISOString()}`);
     // If no HR exists yet, promote this user. No-op otherwise.
     try {
       const result = await bootstrap();
@@ -59,9 +61,11 @@ function LoginPage() {
       },
     });
     if (error) {
+      console.warn(`[SIGNUP_AUDIT] Failed signup attempt - Email: ${email}, Error: ${error.message}`);
       setBusy(false);
       return toast.error(error.message);
     }
+    console.info(`[SIGNUP_AUDIT] Account created - User ID: ${signUpData.user?.id}, Email: ${email}, Timestamp: ${new Date().toISOString()}`);
     // If email confirmation is required, no session exists yet — can't bootstrap.
     if (!signUpData.session) {
       setBusy(false);
@@ -102,11 +106,11 @@ function LoginPage() {
               <form onSubmit={handleLogin} className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? "Signing in…" : "Sign in"}
@@ -120,15 +124,15 @@ function LoginPage() {
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="su-name">Full name</Label>
-                  <Input id="su-name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  <Input id="su-name" required value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="su-email">Email</Label>
-                  <Input id="su-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input id="su-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="su-password">Password</Label>
-                  <Input id="su-password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <Input id="su-password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                 </div>
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? "Creating…" : "Create account"}
