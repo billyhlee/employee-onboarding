@@ -62,12 +62,18 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
+      // Audit log: failed authentication attempt
+      console.warn(`[AUTH_AUDIT] Failed token validation - IP: ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}, Error: ${error?.message || 'Invalid claims'}`);
       throw new Error('Unauthorized: Invalid token');
     }
 
     if (!data.claims.sub) {
+      console.warn(`[AUTH_AUDIT] Missing user ID in token claims - IP: ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}`);
       throw new Error('Unauthorized: No user ID found in token');
     }
+
+    // Audit log: successful authentication
+    console.info(`[AUTH_AUDIT] Successful authentication - User ID: ${data.claims.sub}, IP: ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}, Timestamp: ${new Date().toISOString()}`);
 
     return next({
       context: {

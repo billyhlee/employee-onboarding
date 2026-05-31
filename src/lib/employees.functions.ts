@@ -14,6 +14,10 @@ async function assertHr(userId: string) {
   if (!data) throw new Error("Only HR can perform this action");
 }
 
+function auditLog(action: string, details: Record<string, any>) {
+  console.info(`[AUDIT_LOG] ${action} - ${JSON.stringify({ ...details, timestamp: new Date().toISOString() })}`);
+}
+
 /**
  * If no HR exists yet, promote the caller. Used right after first signup.
  */
@@ -33,6 +37,8 @@ export const bootstrapHr = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: userId, role: "hr" });
     if (error) throw new Error(error.message);
+    
+    auditLog("BOOTSTRAP_HR", { userId, action: "first_hr_promoted" });
     return { promoted: true };
   });
 
@@ -117,6 +123,14 @@ export const createEmployee = createServerFn({ method: "POST" })
       console.error("Notion page creation failed:", err);
     }
 
+    auditLog("EMPLOYEE_CREATED", {
+      createdBy: userId,
+      newEmployeeId: newUserId,
+      email: data.email,
+      role: data.role,
+      hasNotionPage: !!notion,
+    });
+
     return { userId: newUserId, notion };
   });
 
@@ -152,6 +166,13 @@ export const setUserRole = createServerFn({ method: "POST" })
         new_role: data.role,
         changed_by: userId,
       });
+      
+      auditLog("ROLE_CHANGED", {
+        changedBy: userId,
+        targetUserId: data.targetUserId,
+        previousRole,
+        newRole: data.role,
+      });
     }
     return { ok: true };
   });
@@ -175,11 +196,13 @@ export const saveTemplate = createServerFn({ method: "POST" })
         .update({ title: data.title, description: data.description ?? null, position: data.position })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
+      auditLog("TEMPLATE_UPDATED", { updatedBy: userId, templateId: data.id, title: data.title });
     } else {
       const { error } = await supabaseAdmin
         .from("onboarding_templates")
         .insert({ title: data.title, description: data.description ?? null, position: data.position });
       if (error) throw new Error(error.message);
+      auditLog("TEMPLATE_CREATED", { createdBy: userId, title: data.title });
     }
     return { ok: true };
   });
@@ -191,6 +214,7 @@ export const deleteTemplate = createServerFn({ method: "POST" })
     const { userId } = context as { userId: string };
     await assertHr(userId);
     await supabaseAdmin.from("onboarding_templates").delete().eq("id", data.id);
+    auditLog("TEMPLATE_DELETED", { deletedBy: userId, templateId: data.id });
     return { ok: true };
   });
 
@@ -203,6 +227,7 @@ export const saveNotionParent = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("app_settings")
       .upsert({ key: "notion_parent_page_id", value: data.pageId, updated_at: new Date().toISOString() });
+    auditLog("NOTION_PARENT_UPDATED", { updatedBy: userId, pageId: data.pageId });
     return { ok: true };
   });
 
@@ -221,5 +246,11 @@ export const approveOnboarding = createServerFn({ method: "POST" })
       })
       .eq("id", data.employeeId);
     if (error) throw new Error(error.message);
+    
+    auditLog("ONBOARDING_APPROVED", {
+      approvedBy: userId,
+      employeeId: data.employeeId,
+    });
+    
     return { ok: true };
   });
