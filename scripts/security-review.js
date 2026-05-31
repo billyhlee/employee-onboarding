@@ -70,12 +70,12 @@ async function runSecurityReview(fileMap) {
 
 Analyze the following codebase and fix ALL security issues you find. Focus on:
 
-1. **Missing .gitignore entries** - .env files, secrets files not gitignored
-2. **Client-side only auth/RBAC** - authorization checks that only exist in the frontend with no server-side enforcement
-3. **Missing audit logs** - sensitive operations (login, role changes, data access) with no logging
-4. **Plaintext passwords** - temporary passwords or credentials stored/displayed in plaintext
-5. **Insecure defaults** - debug modes left on, open CORS, missing rate limiting configs
-6. **Exposed internal routes** - admin routes without server-side protection
+1. Missing .gitignore entries - .env files, secrets files not gitignored
+2. Client-side only auth/RBAC - authorization checks that only exist in the frontend with no server-side enforcement
+3. Missing audit logs - sensitive operations (login, role changes, data access) with no logging
+4. Plaintext passwords - temporary passwords or credentials stored/displayed in plaintext
+5. Insecure defaults - debug modes left on, open CORS, missing rate limiting configs
+6. Exposed internal routes - admin routes without server-side protection
 
 DO NOT attempt to fix hardcoded secret values - flag those as manual actions instead.
 
@@ -106,7 +106,7 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
   "manual_actions_required": [
     {
       "severity": "critical",
-      "action": "Description of something requiring human intervention (e.g., rotate an exposed API key)"
+      "action": "Description of something requiring human intervention"
     }
   ],
   "summary": "One paragraph summary of what was found and fixed"
@@ -146,9 +146,9 @@ async function applyFixesAndCreatePR(review) {
   const allFixes = [...(fixes || []), ...(new_files || [])];
 
   if (allFixes.length === 0) {
-    console.log('✅ No fixable issues found. No PR needed.');
+    console.log('No fixable issues found. No PR needed.');
     if (manual_actions_required?.length > 0) {
-      console.log('\n⚠️  MANUAL ACTIONS REQUIRED:');
+      console.log('MANUAL ACTIONS REQUIRED:');
       manual_actions_required.forEach(a => console.log(`  [${a.severity.toUpperCase()}] ${a.action}`));
     }
     return;
@@ -168,7 +168,7 @@ async function applyFixesAndCreatePR(review) {
 }
 
 async function main() {
-  console.log('🔍 Collecting files for security review...');
+  console.log('Collecting files for security review...');
   const files = collectFiles('.');
   console.log(`Found ${files.length} files to review`);
 
@@ -177,7 +177,7 @@ async function main() {
 
   const review = await runSecurityReview(fileMap);
 
-  console.log('\n📋 Security Review Summary:');
+  console.log('\nSecurity Review Summary:');
   console.log(review.summary);
   console.log(`\nIssues found: ${review.issues_found?.length || 0}`);
   console.log(`Files to fix: ${(review.fixes?.length || 0) + (review.new_files?.length || 0)}`);
