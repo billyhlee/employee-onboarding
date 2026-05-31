@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, Plus, ExternalLink } from "lucide-react";
+import { Trash2, Plus, ExternalLink, History } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/hr")({
   component: HrDashboard,
