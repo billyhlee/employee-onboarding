@@ -21,6 +21,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       console.error(`[Supabase] ${message}`);
       throw new Error(message);
     }
+
+    // Security validation: ensure URLs use HTTPS in production
+    if (process.env.NODE_ENV === 'production' && SUPABASE_URL && !SUPABASE_URL.startsWith('https://')) {
+      throw new Error('SUPABASE_URL must use HTTPS in production');
+    }
     
     const request = getRequest();
 
