@@ -14,6 +14,17 @@ async function assertHr(userId: string) {
   if (!data) throw new Error("Only HR can perform this action");
 }
 
+async function auditLog(action: string, userId: string, details: Record<string, any>) {
+  console.log(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      action,
+      actor: userId,
+      ...details,
+    })
+  );
+}
+
 /**
  * If no HR exists yet, promote the caller. Used right after first signup.
  */
@@ -33,6 +44,8 @@ export const bootstrapHr = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: userId, role: "hr" });
     if (error) throw new Error(error.message);
+
+    await auditLog("bootstrap_hr", userId, { promoted: true });
     return { promoted: true };
   });
 
@@ -117,6 +130,13 @@ export const createEmployee = createServerFn({ method: "POST" })
       console.error("Notion page creation failed:", err);
     }
 
+    await auditLog("create_employee", userId, {
+      new_user_id: newUserId,
+      email: data.email,
+      role: data.role,
+      manager_id: data.managerId,
+    });
+
     return { userId: newUserId, notion };
   });
 
@@ -136,6 +156,12 @@ export const setUserRole = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: data.targetUserId, role: data.role });
     if (error) throw new Error(error.message);
+
+    await auditLog("set_user_role", userId, {
+      target_user_id: data.targetUserId,
+      new_role: data.role,
+    });
+
     return { ok: true };
   });
 
@@ -204,5 +230,10 @@ export const approveOnboarding = createServerFn({ method: "POST" })
       })
       .eq("id", data.employeeId);
     if (error) throw new Error(error.message);
+
+    await auditLog("approve_onboarding", userId, {
+      employee_id: data.employeeId,
+    });
+
     return { ok: true };
   });

@@ -34,7 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, Plus, ExternalLink } from "lucide-react";
+import { Trash2, Plus, ExternalLink, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/_authenticated/hr")({
   component: HrDashboard,
@@ -262,6 +263,12 @@ function NewEmployeeDialog({
           <DialogTitle>Add a new employee</DialogTitle>
           <DialogDescription>They'll receive the template checklist and a Notion onboarding page.</DialogDescription>
         </DialogHeader>
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            The temporary password will be sent securely. Employees should change it on first login.
+          </AlertDescription>
+        </Alert>
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -280,7 +287,7 @@ function NewEmployeeDialog({
             </div>
             <div className="space-y-1">
               <Label>Temporary password</Label>
-              <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
