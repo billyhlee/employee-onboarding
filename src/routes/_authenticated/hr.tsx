@@ -466,3 +466,85 @@ function SettingsTab() {
     </Card>
   );
 }
+
+function RoleHistoryDialog({ employee }: { employee: ProfileRow }) {
+  const [open, setOpen] = useState(false);
+  const history = useQuery({
+    enabled: open,
+    queryKey: ["role_history", employee.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("role_change_history")
+        .select("id, previous_role, new_role, changed_by, created_at")
+        .eq("target_user_id", employee.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const changerIds = Array.from(
+    new Set((history.data ?? []).map((h) => h.changed_by).filter(Boolean) as string[]),
+  );
+  const changers = useQuery({
+    enabled: open && changerIds.length > 0,
+    queryKey: ["role_history_changers", changerIds.sort().join(",")],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", changerIds);
+      if (error) throw error;
+      return new Map((data ?? []).map((p) => [p.id, p.full_name || p.email]));
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost">
+          <History className="mr-1 h-4 w-4" /> View
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Role history</DialogTitle>
+          <DialogDescription>
+            Past role transitions for {employee.full_name || employee.email}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto">
+          {history.isLoading ? (
+            <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+          ) : (history.data ?? []).length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">
+              No role changes recorded yet.
+            </p>
+          ) : (
+            <ul className="divide-y rounded-md border">
+              {(history.data ?? []).map((h) => (
+                <li key={h.id} className="space-y-1 p-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {h.previous_role ? (
+                      <Badge variant="outline" className="capitalize">{h.previous_role}</Badge>
+                    ) : (
+                      <Badge variant="outline">—</Badge>
+                    )}
+                    <span className="text-muted-foreground">→</span>
+                    <Badge className="capitalize">{h.new_role}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(h.created_at), { addSuffix: true })}
+                    {h.changed_by && changers.data?.get(h.changed_by)
+                      ? ` · by ${changers.data.get(h.changed_by)}`
+                      : ""}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
