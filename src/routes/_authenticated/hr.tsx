@@ -280,7 +280,7 @@ function NewEmployeeDialog({
             </div>
             <div className="space-y-1">
               <Label>Temporary password</Label>
-              <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
