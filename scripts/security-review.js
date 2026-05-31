@@ -122,7 +122,7 @@ ${filesSummary}`;
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-5',
-    max_tokens: 32000,
+    max_tokens: 16000,
     messages: [{ role: 'user', content: prompt }]
   });
 
