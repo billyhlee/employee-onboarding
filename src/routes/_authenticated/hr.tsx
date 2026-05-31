@@ -128,6 +128,7 @@ function EmployeesTab() {
                 <th className="p-3">Role</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Notion</th>
+                <th className="p-3">History</th>
               </tr>
             </thead>
             <tbody>
