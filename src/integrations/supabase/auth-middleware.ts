@@ -4,7 +4,10 @@ import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
-
+async function logAuthEvent(event: string, userId: string | null, details: Record<string, any>) {
+  console.log(`[AUTH] ${event} - User: ${userId ?? 'unknown'}:`, JSON.stringify(details));
+  // In production, write to a dedicated audit_logs table
+}
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
@@ -25,21 +28,25 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     const request = getRequest();
 
     if (!request?.headers) {
+      await logAuthEvent('auth_failed', null, { reason: 'no_headers' });
       throw new Error('Unauthorized: No request headers available');
     }
 
     const authHeader = request.headers.get('authorization');
 
     if (!authHeader) {
+      await logAuthEvent('auth_failed', null, { reason: 'no_auth_header' });
       throw new Error('Unauthorized: No authorization header provided');
     }
 
     if (!authHeader.startsWith('Bearer ')) {
+      await logAuthEvent('auth_failed', null, { reason: 'invalid_auth_type' });
       throw new Error('Unauthorized: Only Bearer tokens are supported');
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
+      await logAuthEvent('auth_failed', null, { reason: 'empty_token' });
       throw new Error('Unauthorized: No token provided');
     }
 
@@ -62,12 +69,19 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
+      await logAuthEvent('auth_failed', null, { reason: 'invalid_token', error: error?.message });
       throw new Error('Unauthorized: Invalid token');
     }
 
     if (!data.claims.sub) {
+      await logAuthEvent('auth_failed', null, { reason: 'no_user_id' });
       throw new Error('Unauthorized: No user ID found in token');
     }
+
+    await logAuthEvent('auth_success', data.claims.sub, { 
+      email: data.claims.email,
+      timestamp: new Date().toISOString(),
+    });
 
     return next({
       context: {

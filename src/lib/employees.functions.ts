@@ -14,6 +14,11 @@ async function assertHr(userId: string) {
   if (!data) throw new Error("Only HR can perform this action");
 }
 
+async function logAudit(action: string, userId: string, details: Record<string, any>) {
+  console.log(`[AUDIT] ${action} by ${userId}:`, JSON.stringify(details));
+  // In production, write to a dedicated audit_logs table
+}
+
 /**
  * If no HR exists yet, promote the caller. Used right after first signup.
  */
@@ -33,6 +38,8 @@ export const bootstrapHr = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: userId, role: "hr" });
     if (error) throw new Error(error.message);
+    
+    await logAudit("bootstrap_hr", userId, { promoted: true });
     return { promoted: true };
   });
 
@@ -117,6 +124,13 @@ export const createEmployee = createServerFn({ method: "POST" })
       console.error("Notion page creation failed:", err);
     }
 
+    await logAudit("create_employee", userId, {
+      newUserId,
+      email: data.email,
+      role: data.role,
+      managerId: data.managerId,
+    });
+
     return { userId: newUserId, notion };
   });
 
@@ -131,11 +145,26 @@ export const setUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context as { userId: string };
     await assertHr(userId);
+    
+    // Get old role for audit
+    const { data: oldRoleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.targetUserId)
+      .maybeSingle();
+    
     await supabaseAdmin.from("user_roles").delete().eq("user_id", data.targetUserId);
     const { error } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: data.targetUserId, role: data.role });
     if (error) throw new Error(error.message);
+    
+    await logAudit("change_role", userId, {
+      targetUserId: data.targetUserId,
+      oldRole: oldRoleData?.role ?? "none",
+      newRole: data.role,
+    });
+    
     return { ok: true };
   });
 
@@ -204,5 +233,10 @@ export const approveOnboarding = createServerFn({ method: "POST" })
       })
       .eq("id", data.employeeId);
     if (error) throw new Error(error.message);
+    
+    await logAudit("approve_onboarding", userId, {
+      employeeId: data.employeeId,
+    });
+    
     return { ok: true };
   });
