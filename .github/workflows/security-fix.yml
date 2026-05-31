@@ -1,0 +1,39 @@
+name: Claude Security Auto-Fix
+ 
+on:
+  push:
+    branches:
+      - main
+      - master
+      - demo
+      - demo/**
+ 
+jobs:
+  security-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+ 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+ 
+      - name: Install dependencies
+        run: npm install @anthropic-ai/sdk @octokit/rest
+ 
+      - name: Run Claude Security Review & Fix
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BASE_BRANCH: ${{ github.ref_name }}
+        run: node scripts/security-review.js
